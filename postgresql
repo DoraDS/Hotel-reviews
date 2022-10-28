@@ -1,0 +1,134 @@
+--creating a table with appropriate data types and primary key
+
+CREATE TABLE de_challenge.dbc_hotel_ratings(
+    hotel_address varchar(5000) NOT NULL,
+    hotel_city varchar(50) NOT NULL,
+    hotel_country varchar(50) NOT NULL,
+    keys serial not null,
+    hotel_latitude float NOT NULL,
+    hotel_longitude float NOT NULL,
+    hotel_name varchar(1000) NOT NULL,
+    hotel_postcode varchar(50) NOT NULL,
+    hotel_province varchar(50) NOT NULL,
+    review_date date NOT NULL,
+    review_rating float NOT NULL,
+    review_text varchar(100000) NOT NULL,
+    review_title varchar(500) NOT NULL,
+    user_city varchar(50) NOT NULL,
+    user_province_or_country varchar(50) NOT NULL,
+    username varchar(50) NOT NULL,
+    PRIMARY KEY (keys)
+);
+
+-- Granting permission to users - studentX does not exist (it is just an example)
+
+GRANT SELECT, INSERT, UPDATE on TABLE de_challenge.dbc_hotel_ratings To "studentX";
+
+--creating a rule for ignoring duplicates
+
+CREATE OR REPLACE RULE ignore_duplicates 
+AS ON INSERT 
+TO de_challenge.dbc_hotel_ratings
+   WHERE (EXISTS ( SELECT 1
+           FROM de_challenge.dbc_hotel_ratings dim
+          WHERE 
+dim.hotel_address = NEW.hotel_address and 
+dim.hotel_name = NEW.hotel_name and 
+dim.hotel_city = NEW.hotel_city and 
+dim.hotel_country = NEW.hotel_country and
+dim.hotel_latitude = NEW.hotel_latitude and 
+dim.hotel_longitude = NEW.hotel_longitude and 
+dim.hotel_postcode = NEW.hotel_postcode and 
+dim.hotel_province = NEW.hotel_province and 
+dim.review_date = NEW.review_date and 
+dim.review_rating = NEW.review_rating and 
+dim.review_text = NEW.review_text and 
+dim.review_title = NEW.review_title
+and dim.user_city = NEW.user_city and 
+dim.username = NEW.username and 
+dim.user_province_or_country = NEW.user_province_or_country)) 
+DO INSTEAD NOTHING;
+
+
+--USER TESTING: (using SELECT, UPDATE and INSERT as these keywords are the only ones available for users)
+
+--UPDATE WORKS
+
+UPDATE de_challenge.dbc_hotel_ratings
+SET hotel_address = 'address'
+WHERE keys=1;
+
+SELECT keys, hotel_address FROM de_challenge.dbc_hotel_ratings WHERE keys=1;
+
+--INSERT WORKS WHEN HAVING UNIQUE KEYS and new information for at least one row
+
+INSERT INTO de_challenge.dbc_hotel_ratings(hotel_address, hotel_city, hotel_country, keys, hotel_latitude, hotel_longitude, hotel_name, hotel_postcode, hotel_province, review_date, review_rating, review_text, review_title, user_city, user_province_or_country, username)
+VALUES
+    ('address',
+    'city',
+    'country',                                       
+    27844,
+    -15.15,
+    20.15,
+    'name',
+    'postcode',
+    'province',
+    '2061-02-02',
+    2.3,
+    23,
+    'title',
+    'usercity',
+    'userprovince',
+    'usernameses'
+    );
+
+SELECT * FROM de_challenge.dbc_hotel_ratings WHERE keys=27844;
+
+--INSERT DOES NOT WORK WITHOUT UNIQUE KEYS
+
+INSERT INTO de_challenge.dbc_hotel_ratings(hotel_address, hotel_city, hotel_country, keys, hotel_latitude, hotel_longitude, hotel_name, hotel_postcode, hotel_province, review_date, review_rating, review_text, review_title, user_city, user_province_or_country, username)
+VALUES
+    ('address',
+    'city',
+    'country',                                       
+    27844,
+    -15.15,
+    20.15,
+    'name',
+    'postcode',
+    'province',
+    '2061-02-02',
+    2.3,
+    23,
+    'title',
+    'usercity',
+    'userprovince',
+    'usernameses'
+    );
+              
+--INSERT does not work when attempting to duplicate rows under a unique key   
+           
+INSERT INTO de_challenge.dbc_hotel_ratings(hotel_address, hotel_city, hotel_country, keys, hotel_latitude, hotel_longitude, hotel_name, hotel_postcode, hotel_province, review_date, review_rating, review_text, review_title, user_city, user_province_or_country, username)
+VALUES
+    ('address',
+    'city',
+    'country',                                       
+    27849,
+    -15.15,
+    20.15,
+    'name',
+    'postcode',
+    'province',
+    '2061-02-02',
+    2.3,
+    23,
+    'title',
+    'usercity',
+    'userprovince',
+    'usernameses'
+    );
+
+--SELECTING THE LAST KEY (useful when wanting to insert new rows)
+
+SELECT                                      
+    max(last_value) FROM (SELECT LAST_value(keys) OVER(PARTITION BY hotel_address) FROM de_challenge.dbc_hotel_dim_int) attempt;
